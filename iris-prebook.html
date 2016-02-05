@@ -1,0 +1,97 @@
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+
+<dom-module id="iris-prebook">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <div class="day-picker">
+      <paper-button id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-button>
+      <div class="days">
+        <template is="dom-repeat" items="[[days]]">
+          <paper-button class$="[[dayClass(item)]]" on-click="selectDay" raised>
+            <div class="day">[[getDay(item)]]</div>
+            <div class="date">[[getDate(item)]]</div>
+          </paper-button>
+        </template>
+      </div>
+      <paper-button id="next-week" on-click="nextWeek" disabled$="[[canNextWeek(slots,currentWeek)]]" raised></paper-button>
+    </div>
+
+    <div class="slot-picker">
+      <paper-button id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canPrevSlots(slots,currentSlot)]]" raised></paper-button>
+      <div class="days">
+        <template is="dom-repeat" items="[[slots]]">
+          <paper-button class="chunk" on-click="selectSlot">
+            [[chunkTime(item.start)]] - [[chunkTime(item.end)]]
+          </paper-button>
+        </template>
+      </div>
+      <paper-button id="next-slots" on-click="nextSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canNextSlots(slots,currentSlot)]]" raised></paper-button>
+    </div>
+
+  </template>
+  <script>
+    'use strict'
+
+    Polymer({
+      is: 'iris-prebook',
+      properties: {
+        days: {
+          type: Array
+        },
+        slots: {
+          type: Array
+        }
+      },
+      ready() {
+
+      },
+      selectSlot(e) {
+
+      },
+      selectDay(e) {
+        let day = e.model.id;
+        console.log(e.model);
+        // if (day !== currentDay)
+        this.fire('select-day', day)
+      },
+      scrollableSlots(slots) {
+        return false;
+      },
+      canPrevSlots(slots, currentSlot) {},
+      canNextSlots(slots, currentSlot) {},
+      canNextWeek(slots, currentWeek) {},
+      canPrevWeek(slots, currentWeek) {},
+      dayClass(item) {
+        return item.active ? 'on' : 'off';
+      },
+      getDay(item) {
+        return 'day from moment';
+      },
+      getDate(item) {
+        return 'date from moment';
+      },
+      previousWeek() {
+        this.fire('week-change', {
+          direction: 'previous',
+          week: this.currentWeek
+        })
+      },
+      nextWeek() {
+        this.fire('week-change', {
+          direction: 'next',
+          week: this.currentWeek
+        })
+      },
+      previousSlots() {
+
+      },
+      nextSlots() {
+
+      }
+    });
+  </script>
+</dom-module>
