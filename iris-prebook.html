@@ -6,30 +6,42 @@
       :host {
         display: block;
       }
+      
+      .picker {
+        @apply(--layout);
+        @apply(--layout-horizontal);
+        @apply(--layout-center);
+      }
+      
+      .picker paper-icon-button {
+        color: var(--mydoc-brown-800);
+        border: 2px solid var(--mydoc-brown-800);
+        border-radius: 50%;
+      }
     </style>
-    <div class="day-picker">
-      <paper-button id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-button>
+    <div class="day-picker picker">
+      <paper-icon-button icon="chevron-left" id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-icon-button>
       <div class="days">
         <template is="dom-repeat" items="[[days]]">
-          <paper-button class$="[[dayClass(item)]]" on-click="selectDay" raised>
+          <paper-button disabled$="[[!item.is_available ]]" on-click="selectDay" raised>
             <div class="day">[[getDay(item)]]</div>
             <div class="date">[[getDate(item)]]</div>
           </paper-button>
         </template>
       </div>
-      <paper-button id="next-week" on-click="nextWeek" disabled$="[[canNextWeek(slots,currentWeek)]]" raised></paper-button>
+      <paper-icon-button icon="chevron-right" id="next-week" on-click="nextWeek" disabled$="[[canNextWeek(slots,currentWeek)]]" raised></paper-icon-button>
     </div>
 
-    <div class="slot-picker">
-      <paper-button id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canPrevSlots(slots,currentSlot)]]" raised></paper-button>
+    <div class="slot-picker picker">
+      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canPrevSlots(slots,currentSlot)]]" raised></paper-icon-button>
       <div class="days">
         <template is="dom-repeat" items="[[slots]]">
           <paper-button class="chunk" on-click="selectSlot">
-            [[chunkTime(item.start)]] - [[chunkTime(item.end)]]
+            [[chunkTime(item.time_description)]]
           </paper-button>
         </template>
       </div>
-      <paper-button id="next-slots" on-click="nextSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canNextSlots(slots,currentSlot)]]" raised></paper-button>
+      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canNextSlots(slots,currentSlot)]]" raised></paper-icon-button>
     </div>
 
   </template>
@@ -47,7 +59,33 @@
         }
       },
       ready() {
+        this.timezone = 'Europe/Moscow';
 
+        this.days = [{
+          is_available: true,
+          date: Date.now(),
+          slots: [{
+            time_description: [0, 1000]
+          }]
+        }, {
+          is_available: false,
+          date: Date.now()
+        }, {
+          is_available: false,
+          date: Date.now()
+        }, {
+          is_available: true,
+          date: Date.now()
+        }, {
+          is_available: true,
+          date: Date.now()
+        }];
+        for (let i = 1; i < 25; i += 1) {
+          this.days[0].slots.push({
+            time_description: [i * 3000, (i + 1) * 3000]
+          })
+        }
+        this.slots = this.days[0].slots
       },
       selectSlot(e) {
 
@@ -69,10 +107,10 @@
         return item.active ? 'on' : 'off';
       },
       getDay(item) {
-        return 'day from moment';
+        return moment(item.date).tz(this.timezone).format('ddd');
       },
       getDate(item) {
-        return 'date from moment';
+        return moment(item.date).tz(this.timezone).format('D MMM');
       },
       previousWeek() {
         this.fire('week-change', {
@@ -91,6 +129,17 @@
       },
       nextSlots() {
 
+      },
+      chunkTime(times) {
+
+        return this.timeFormat(times[0]) + '-' + this.timeFormat(times[1]);
+      },
+      timeFormat(time) {
+        let hours = _.floor(time / (60 * 60));
+        let mins = _.floor((time % 3600) / 60);
+        mins = mins.toString().length == 1 ? '0' + mins : mins;
+        console.log(time, mins);
+        return hours + ':' + mins;
       }
     });
   </script>
