@@ -19,11 +19,12 @@
         border-radius: 50%;
       }
     </style>
+    <iris-shared-entities id="timezone" namespace="timezone"></iris-shared-entities>
     <div class="day-picker picker">
       <paper-icon-button icon="chevron-left" id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-icon-button>
       <div class="days">
         <template is="dom-repeat" items="[[days]]">
-          <paper-button disabled$="[[!item.is_available ]]" on-click="selectDay" raised>
+          <paper-button disabled$="[[!item.is_available ]]" on-click="selectDay" raised noink>
             <div class="day">[[getDay(item)]]</div>
             <div class="date">[[getDate(item)]]</div>
           </paper-button>
@@ -35,7 +36,7 @@
     <div class="slot-picker picker">
       <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canPrevSlots(slots,currentSlot)]]" raised></paper-icon-button>
       <div class="days">
-        <template is="dom-repeat" items="[[slots]]">
+        <template is="dom-repeat" items="[[calcPage(slots,page)]]">
           <paper-button class="chunk" on-click="selectSlot">
             [[chunkTime(item.time_description)]]
           </paper-button>
@@ -58,9 +59,17 @@
           type: Array
         }
       },
-      ready() {
-        this.timezone = 'Europe/Moscow';
+      calcPage(slots, page) {
+        let from = this.slots_per_page * page;
+        let to = this.slots_per_page * (page + 1);
 
+        return slots.slice(from, to);
+      },
+      ready() {
+        this.timezone = this.$.timezone.get('name');
+        this.slots_per_page = 8;
+        this.page = 0;
+        console.log(this.timezone);
         this.days = [{
           is_available: true,
           date: Date.now(),
@@ -125,10 +134,10 @@
         })
       },
       previousSlots() {
-
+        this.page--;
       },
       nextSlots() {
-
+        this.page++;
       },
       chunkTime(times) {
 
@@ -138,7 +147,7 @@
         let hours = _.floor(time / (60 * 60));
         let mins = _.floor((time % 3600) / 60);
         mins = mins.toString().length == 1 ? '0' + mins : mins;
-        console.log(time, mins);
+
         return hours + ':' + mins;
       }
     });
