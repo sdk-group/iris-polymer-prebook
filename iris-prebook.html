@@ -1,4 +1,5 @@
 <link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/iron-resizable-behavior/iron-resizable-behavior.html">
 
 <dom-module id="iris-prebook">
   <template>
@@ -13,10 +14,32 @@
         @apply(--layout-center);
       }
       
+      paper-button.chunk {
+        width: 150px;
+        margin: 0;
+      }
+      
       .picker paper-icon-button {
         color: var(--mydoc-brown-800);
-        border: 2px solid var(--mydoc-brown-800);
+        border: 2px solid;
         border-radius: 50%;
+      }
+      
+      .picker paper-icon-button[disabled] {
+        @apply(--pagination-icon-buttons-disabled);
+      }
+      
+      .slot-picker {
+        width: 100%;
+        display: flex;
+      }
+      
+      #days {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        margin: 0 15px;
+        justify-content: space-between;
       }
     </style>
     <iris-shared-entities id="timezone" namespace="timezone"></iris-shared-entities>
@@ -34,15 +57,15 @@
     </div>
 
     <div class="slot-picker picker">
-      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canPrevSlots(slots,currentSlot)]]" raised></paper-icon-button>
-      <div class="days">
-        <template is="dom-repeat" items="[[calcPage(slots,page)]]">
-          <paper-button class="chunk" on-click="selectSlot">
+      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[!canPrevSlots(page)]]" raised></paper-icon-button>
+      <div id="days">
+        <template is="dom-repeat" items="[[calcPage(slots,page, slots_per_page)]]">
+          <paper-button class="chunk" raised on-click="selectSlot">
             [[chunkTime(item.time_description)]]
           </paper-button>
         </template>
       </div>
-      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[canNextSlots(slots,currentSlot)]]" raised></paper-icon-button>
+      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[!canNextSlots(page,slots)]]" raised></paper-icon-button>
     </div>
 
   </template>
@@ -51,75 +74,81 @@
 
     Polymer({
       is: 'iris-prebook',
+      behaviors: [
+        Polymer.IronResizableBehavior
+      ],
       properties: {
         days: {
           type: Array
         },
         slots: {
           type: Array
+        },
+        selected: {
+          type: Object,
+          notify: true
         }
       },
-      calcPage(slots, page) {
+      listeners: {
+        'iron-resize': 'calcItemCount'
+      },
+      calcItemCount() {
+        let width = this.$.days.offsetWidth;
+        this.set('slots_per_page', _.floor(width / 160));
+      },
+      attached() {
+        this.async(this.notifyResize, 1);
+      },
+      calcPage(slots, page, slots_per_page) {
+        this.calcItemCount();
         let from = this.slots_per_page * page;
         let to = this.slots_per_page * (page + 1);
 
         return slots.slice(from, to);
       },
       ready() {
-        this.timezone = this.$.timezone.get('name');
+
         this.slots_per_page = 8;
         this.page = 0;
-        console.log(this.timezone);
-        this.days = [{
-          is_available: true,
-          date: Date.now(),
-          slots: [{
-            time_description: [0, 1000]
-          }]
-        }, {
-          is_available: false,
-          date: Date.now()
-        }, {
-          is_available: false,
-          date: Date.now()
-        }, {
-          is_available: true,
-          date: Date.now()
-        }, {
-          is_available: true,
-          date: Date.now()
-        }];
-        for (let i = 1; i < 25; i += 1) {
-          this.days[0].slots.push({
-            time_description: [i * 3000, (i + 1) * 3000]
-          })
-        }
-        this.slots = this.days[0].slots
       },
       selectSlot(e) {
 
+        let item = e.model.item;
+        this.set('selected', item.time_description);
       },
       selectDay(e) {
-        let day = e.model.id;
-        console.log(e.model);
-        // if (day !== currentDay)
-        this.fire('select-day', day)
+        let item = e.model.item;
+        console.log('selected day:', item);
+
+        this.fire('select-day', item)
       },
       scrollableSlots(slots) {
         return false;
       },
-      canPrevSlots(slots, currentSlot) {},
-      canNextSlots(slots, currentSlot) {},
-      canNextWeek(slots, currentWeek) {},
-      canPrevWeek(slots, currentWeek) {},
+      canPrevSlots(page) {
+        console.log('prev en', page);
+        return page > 0;
+      },
+      canNextSlots(page, slots) {
+        console.log('next en', page, this.slots_per_page);
+        return this.slots ? (page + 1) * this.slots_per_page < this.slots.length : false;
+      },
+      canNextWeek(slots, currentWeek) {
+        return true;
+      },
+      canPrevWeek(slots, currentWeek) {
+        return true;
+      },
       dayClass(item) {
         return item.active ? 'on' : 'off';
       },
       getDay(item) {
-        return moment(item.date).tz(this.timezone).format('ddd');
+        let timezone = this.$.timezone.get('name');
+        return moment(item.date).tz(timezone).format('ddd');
       },
       getDate(item) {
-        return moment(item.date).tz(this.timezone).format('D MMM');
+        let timezone = this.$.timezone.get('name');
+        return moment(item.date).tz(timezone).format('D MMM');
       },
       previousWeek() {
         this.fire('week-change', {
