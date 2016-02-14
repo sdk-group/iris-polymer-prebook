@@ -9,20 +9,44 @@
       }
       
       .picker {
-        @apply(--layout);
         @apply(--layout-horizontal);
         @apply(--layout-center);
+        @apply(--layout-justified);
+        padding: 20px 0;
       }
       
-      paper-button.chunk {
+      .day-picker {
+        height: 120px;
+      }
+      
+      .day-picker paper-button {
+        transition: padding 0.5s ease-out;
+      }
+      
+      .day-picker paper-button.selected {
+        padding: 30px;
+      }
+      
+      paper-button.selected {
+        border: 4px solid var(--mydoc-beige-800);
+        @apply(--shadow-elevation-3dp);
+      }
+      
+      #chunks paper-button {
         width: 150px;
         margin: 0;
+        @apply(--layout);
+        @apply(--layout-center);
+        @apply(--layout-center-justified);
       }
       
       .picker paper-icon-button {
         color: var(--mydoc-brown-800);
         border: 2px solid;
         border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        padding: 0 10px;
       }
       
       .picker paper-icon-button[disabled] {
@@ -34,20 +58,27 @@
         display: flex;
       }
       
-      #days {
+      #chunks {
         flex: 1;
         display: flex;
         flex-direction: row;
         margin: 0 15px;
-        justify-content: space-between;
+        justify-content: space-around;
+        align-self: stretch;
+      }
+      
+      paper-spinner {
+        width: 56px;
+        height: 56px;
       }
     </style>
     <iris-shared-entities id="timezone" namespace="timezone"></iris-shared-entities>
     <div class="day-picker picker">
       <paper-icon-button icon="chevron-left" id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-icon-button>
       <div class="days">
+        <paper-spinner active hidden$="[[!days_locked]]"></paper-spinner>
         <template is="dom-repeat" items="[[days]]">
-          <paper-button disabled$="[[!item.is_available ]]" on-click="selectDay" raised noink>
+          <paper-button disabled$="[[!item.is_available ]]" class$="{{selectedDay(selected.day,item)}}" on-click="selectDay" hidden$="[[days_locked]]" raised noink>
             <div class="day">[[getDay(item)]]</div>
             <div class="date">[[getDate(item)]]</div>
           </paper-button>
@@ -57,15 +88,16 @@
     </div>
 
     <div class="slot-picker picker">
-      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[!canPrevSlots(page)]]" raised></paper-icon-button>
-      <div id="days">
+      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[!scrollableSlots(slots,slots_per_page)]]" disabled$="[[!canPrevSlots(page)]]" raised></paper-icon-button>
+      <div id="chunks">
+        <paper-spinner active hidden$="[[!slots_locked]]"></paper-spinner>
         <template is="dom-repeat" items="[[calcPage(slots,page, slots_per_page)]]">
-          <paper-button class="chunk" raised on-click="selectSlot">
+          <paper-button raised on-click="selectSlot" class$="{{selectedSlot(selected.slot,item)}}" hidden$="[[slots_locked]]">
             [[chunkTime(item.time_description)]]
           </paper-button>
         </template>
       </div>
-      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[scrollableSlots(slots)]]" disabled$="[[!canNextSlots(page,slots)]]" raised></paper-icon-button>
+      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[!scrollableSlots(slots,slots_per_page)]]" disabled$="[[!canNextSlots(page,slots)]]" raised></paper-icon-button>
     </div>
 
   </template>
@@ -89,12 +121,20 @@
           notify: true
         }
       },
+      observers: ['_init(days,slots)'],
       listeners: {
         'iron-resize': 'calcItemCount'
       },
+      _init(days, slots) {
+        this.set('initialized', days.length && slots.length);
+        this.set('selected.day', days[0]);
+
+        this.async(this.notifyResize, 1);
+      },
       calcItemCount() {
-        let width = this.$.days.offsetWidth;
+        let width = this.$.chunks.offsetWidth;
         this.set('slots_per_page', _.floor(width / 160));
+        // console.log('resize', width);
       },
       attached() {
         this.async(this.notifyResize, 1);
@@ -107,30 +147,35 @@
         return slots.slice(from, to);
       },
       ready() {
-
+        this.selected = {};
+        this.locked = true;
         this.slots_per_page = 8;
         this.page = 0;
       },
       selectSlot(e) {
-
         let item = e.model.item;
-        this.set('selected', item.time_description);
+        this.set('selected.slot', item);
+      },
+      selectedDay(day, item) {
+
+        return day == item ? 'selected' : '';
+      },
+      selectedSlot(slot, item) {
+        return slot == item ? 'selected' : '';
       },
       selectDay(e) {
         let item = e.model.item;
-        console.log('selected day:', item);
+        this.set('selected.day', item);
 
-        this.fire('select-day', item)
+        this.fire('select-day', item);
       },
-      scrollableSlots(slots) {
-        return false;
+      scrollableSlots(slots, slots_per_page) {
+        return slots.length > slots_per_page;
       },
       canPrevSlots(page) {
-        console.log('prev en', page);
         return page > 0;
       },
       canNextSlots(page, slots) {
-        console.log('next en', page, this.slots_per_page);
         return this.slots ? (page + 1) * this.slots_per_page < this.slots.length : false;
       },
       canNextWeek(slots, currentWeek) {
@@ -169,7 +214,6 @@
         this.page++;
       },
       chunkTime(times) {
-
         return this.timeFormat(times[0]) + '-' + this.timeFormat(times[1]);
       },
       timeFormat(time) {
@@ -178,6 +222,14 @@
         mins = mins.toString().length == 1 ? '0' + mins : mins;
 
         return hours + ':' + mins;
+      },
+      lock(items) {
+        if (!items) this.set('days_locked', true);
+        this.set('slots_locked', true);
+      },
+      unlock(items) {
+        if (!items) this.set('days_locked', false);
+        this.set('slots_locked', false);
       }
     });
   </script>
