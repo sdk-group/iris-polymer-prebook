@@ -15,8 +15,18 @@
         padding: 20px 0;
       }
       
-      .day-picker {
-        height: 120px;
+      .day-picker {}
+      
+      .day-picker h2 {
+        text-align: center;
+      }
+      
+      .day-picker paper-button,
+      .day-picker .day-placeholder {
+        width: 12%;
+        display: inline-block;
+        margin: 0.29em;
+        text-align: center;
       }
       
       .day-picker paper-button {
@@ -77,12 +87,26 @@
       <paper-icon-button icon="chevron-left" id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-icon-button>
       <div class="days">
         <paper-spinner active hidden$="[[!days_locked]]"></paper-spinner>
-        <template is="dom-repeat" items="[[days]]">
+        <div class="month-splitter" hidden$="[[days_locked]]">
+          <h2>[[month.label]]</h2>
+          <span class="day-placeholder">ПН</span>
+          <span class="day-placeholder">ВТ</span>
+          <span class="day-placeholder">СР</span>
+          <span class="day-placeholder">ЧТ</span>
+          <span class="day-placeholder">ПТ</span>
+          <span class="day-placeholder">СБ</span>
+          <span class="day-placeholder">ВС</span>
+        </div>
+        <template is="dom-repeat" items="[[process(days.items)]]">
+
           <paper-button disabled$="[[!item.is_available ]]" class$="{{selectedDay(selected.day,item)}}" on-click="selectDay" hidden$="[[days_locked]]" raised noink>
-            <div class="day">[[getDay(item)]]</div>
-            <div class="date">[[getDate(item)]]</div>
+            <div class="date">[[item.day_of_month]]</div>
           </paper-button>
+
+
+
         </template>
+
       </div>
       <paper-icon-button icon="chevron-right" id="next-week" on-click="nextWeek" disabled$="[[canNextWeek(slots,currentWeek)]]" raised></paper-icon-button>
     </div>
@@ -125,9 +149,52 @@
       listeners: {
         'iron-resize': 'calcItemCount'
       },
+      process(days) {
+        if (!days || days.length === 0) return [];
+
+        let timezone = this.$.timezone.get('name');
+
+        let first = moment(days[0].date).tz(timezone);
+        this.set('month', {
+          label: first.format('MMMM')
+        });
+
+        let day_of_month = first.format('D');
+
+        let result = _.map(_.range(1, parseInt(day_of_month, 10)), day => ({
+          "is_available": false,
+          "day_of_month": day
+        }));
+        let first_available = false;
+        result = _.reduce(days, (proc, day, index) => {
+          let current = moment(day.date).tz(timezone);
+          first_available = first_available === false && day.is_available ? day : first_available;
+
+          proc.push({
+            is_available: day.is_available,
+            date: day.date,
+            day_of_month: current.format('D')
+          });
+
+          return proc;
+        }, result);
+
+        console.log(first_available);
+
+        let additional = _.range(parseInt(result[result.length - 1].day_of_month, 10) + 1, parseInt(this.days.total, 10) + 1);
+
+        _.forEach(additional, day => result.push({
+          "is_available": false,
+          "day_of_month": day
+        }));
+
+        this.set('selected.day', first_available);
+        this.fire('select-day', first_available);
+
+        return result;
+      },
       _init(days, slots) {
         this.set('initialized', days.length && slots.length);
-        this.set('selected.day', days[0]);
 
         this.async(this.notifyResize, 1);
       },
@@ -157,8 +224,7 @@
         this.set('selected.slot', item);
       },
       selectedDay(day, item) {
-
-        return day == item ? 'selected' : '';
+        return day.date == item.date ? 'selected' : '';
       },
       selectedSlot(slot, item) {
         return slot == item ? 'selected' : '';
