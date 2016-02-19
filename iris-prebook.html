@@ -5,7 +5,7 @@
   <template>
     <style>
       :host {
-        display: block;
+        @apply(--layout-vertical);
       }
       
       .picker {
@@ -14,7 +14,9 @@
         @apply(--layout-justified);
       }
       
-      .day-picker {}
+      .day-picker {
+        min-height: 430px;
+      }
       
       .day-picker h2 {
         text-align: center;
@@ -215,9 +217,8 @@
           return proc;
         }, result);
 
-        console.log(first_available);
 
-        let additional = _.range(parseInt(result[result.length - 1].day_of_month, 10) + 1, parseInt(this.days.total, 10) + 1 + 7);
+        let additional = _.range(parseInt(result[result.length - 1].day_of_month, 10) + 1, parseInt(this.days.total, 10) + 1);
 
         _.forEach(additional, day => result.push({
           "is_available": false,
