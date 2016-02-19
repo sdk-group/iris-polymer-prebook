@@ -12,29 +12,52 @@
         @apply(--layout-horizontal);
         @apply(--layout-center);
         @apply(--layout-justified);
-        padding: 20px 0;
       }
       
       .day-picker {}
       
       .day-picker h2 {
         text-align: center;
+        margin-top: 0;
+      }
+      
+      .day-picker .day-placeholder {
+        font-size: 20px;
+        font-weight: 800;
       }
       
       .day-picker paper-button,
       .day-picker .day-placeholder {
-        width: 12%;
+        width: calc(100% * (1/7));
         display: inline-block;
-        margin: 0.29em;
         text-align: center;
       }
       
       .day-picker paper-button {
-        transition: padding 0.5s ease-out;
+        transition: 0.2s ease-out;
       }
       
       .day-picker paper-button.selected {
-        padding: 30px;
+        font-weight: 800;
+        transform: scale(1.3);
+        background: white;
+        z-index: 1;
+      }
+      
+      .days {
+        @apply(--layout-flex-auto);
+        margin: 0 10px;
+      }
+      
+      .week {
+        height: 60px;
+      }
+      
+      .week,
+      .month-splitter {
+        @apply(--layout-horizontal);
+        @apply(--layout-center);
+        @apply(--layout-start-justified);
       }
       
       paper-button.selected {
@@ -43,8 +66,8 @@
       }
       
       #chunks paper-button {
-        width: 150px;
-        margin: 0;
+        width: 140px;
+        margin: 10px;
         @apply(--layout);
         @apply(--layout-center);
         @apply(--layout-center-justified);
@@ -65,16 +88,17 @@
       
       .slot-picker {
         width: 100%;
+        height: 200px;
         display: flex;
       }
       
       #chunks {
-        flex: 1;
-        display: flex;
-        flex-direction: row;
-        margin: 0 15px;
-        justify-content: space-around;
-        align-self: stretch;
+        width: calc(100% - 140px);
+        @apply(--layout-horizontal);
+        @apply(--layout-flex-auto);
+        @apply(--layout-wrap);
+        @apply(--layout-center);
+        @apply(--layout-center-justified);
       }
       
       paper-spinner {
@@ -84,11 +108,11 @@
     </style>
     <iris-shared-entities id="timezone" namespace="timezone"></iris-shared-entities>
     <div class="day-picker picker">
-      <paper-icon-button icon="chevron-left" id="previous-week" on-click="previousWeek" disabled$="[[canPrevWeek(slots,currentWeek)]]" raised></paper-icon-button>
-      <div class="days">
-        <paper-spinner active hidden$="[[!days_locked]]"></paper-spinner>
-        <div class="month-splitter" hidden$="[[days_locked]]">
-          <h2>[[month.label]]</h2>
+      <paper-icon-button icon="chevron-left" id="previous-week" on-click="previousWeek" disabled$="[[!canPrevWeek(days,days_locked)]]" raised></paper-icon-button>
+      <paper-spinner active hidden$="[[!days_locked]]"></paper-spinner>
+      <div class="days" hidden$="[[days_locked]]">
+        <h2>[[month.label]]</h2>
+        <div class="month-splitter">
           <span class="day-placeholder">ПН</span>
           <span class="day-placeholder">ВТ</span>
           <span class="day-placeholder">СР</span>
@@ -97,22 +121,24 @@
           <span class="day-placeholder">СБ</span>
           <span class="day-placeholder">ВС</span>
         </div>
-        <template is="dom-repeat" items="[[process(days.items)]]">
+        <template is="dom-repeat" items="[[process(days.items)]]" as="week">
+          <div class="week">
 
-          <paper-button disabled$="[[!item.is_available ]]" class$="{{selectedDay(selected.day,item)}}" on-click="selectDay" hidden$="[[days_locked]]" raised noink>
-            <div class="date">[[item.day_of_month]]</div>
-          </paper-button>
+            <template is="dom-repeat" items="[[week]]">
+              <paper-button disabled$="[[!item.is_available ]]" class$="{{selectedDay(selected.day,item)}}" on-click="selectDay" raised noink>
+                <div class="date">[[item.day_of_month]]</div>
+              </paper-button>
+            </template>
 
-
-
+          </div>
         </template>
 
       </div>
-      <paper-icon-button icon="chevron-right" id="next-week" on-click="nextWeek" disabled$="[[canNextWeek(slots,currentWeek)]]" raised></paper-icon-button>
+      <paper-icon-button icon="chevron-right" id="next-week" on-click="nextWeek" disabled$="[[!canNextWeek(days,days_locked)]]" raised></paper-icon-button>
     </div>
 
-    <div class="slot-picker picker">
-      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[!scrollableSlots(slots,slots_per_page)]]" disabled$="[[!canPrevSlots(page)]]" raised></paper-icon-button>
+    <div class="slot-picker picker" hidden$="[[days_locked]]">
+      <paper-icon-button icon="chevron-left" id="previous-slots" on-click="previousSlots" hidden$="[[!scrollableSlots(slots,slots_per_page,slots_locked)]]" disabled$="[[!canPrevSlots(page)]]" raised></paper-icon-button>
       <div id="chunks">
         <paper-spinner active hidden$="[[!slots_locked]]"></paper-spinner>
         <template is="dom-repeat" items="[[calcPage(slots,page, slots_per_page)]]">
@@ -121,7 +147,7 @@
           </paper-button>
         </template>
       </div>
-      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[!scrollableSlots(slots,slots_per_page)]]" disabled$="[[!canNextSlots(page,slots)]]" raised></paper-icon-button>
+      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[!scrollableSlots(slots,slots_per_page,slots_locked)]]" disabled$="[[!canNextSlots(page,slots)]]" raised></paper-icon-button>
     </div>
 
   </template>
@@ -135,10 +161,14 @@
       ],
       properties: {
         days: {
-          type: Array
+          type: Array,
+          value: [],
+          observer: '_daysChanged'
         },
         slots: {
-          type: Array
+          type: Array,
+          value: [],
+          observer: '_slotsChanged'
         },
         selected: {
           type: Object,
@@ -148,6 +178,12 @@
       observers: ['_init(days,slots)'],
       listeners: {
         'iron-resize': 'calcItemCount'
+      },
+      _daysChanged() {
+        this.set('selected.slot', undefined);
+      },
+      _slotsChanged() {
+        this.set('page', 0);
       },
       process(days) {
         if (!days || days.length === 0) return [];
@@ -181,7 +217,7 @@
 
         console.log(first_available);
 
-        let additional = _.range(parseInt(result[result.length - 1].day_of_month, 10) + 1, parseInt(this.days.total, 10) + 1);
+        let additional = _.range(parseInt(result[result.length - 1].day_of_month, 10) + 1, parseInt(this.days.total, 10) + 1 + 7);
 
         _.forEach(additional, day => result.push({
           "is_available": false,
@@ -191,16 +227,14 @@
         this.set('selected.day', first_available);
         this.fire('select-day', first_available);
 
-        return result;
+        return _.chunk(result, 7);
       },
       _init(days, slots) {
-        this.set('initialized', days.length && slots.length);
-
         this.async(this.notifyResize, 1);
       },
       calcItemCount() {
         let width = this.$.chunks.offsetWidth;
-        this.set('slots_per_page', _.floor(width / 160));
+        this.set('slots_per_page', _.floor(width / 160) * 2);
         // console.log('resize', width);
       },
       attached() {
@@ -232,11 +266,12 @@
       selectDay(e) {
         let item = e.model.item;
         this.set('selected.day', item);
+        this.set('selected.slot', undefined);
 
         this.fire('select-day', item);
       },
-      scrollableSlots(slots, slots_per_page) {
-        return slots.length > slots_per_page;
+      scrollableSlots(slots, slots_per_page, slots_locked) {
+        return slots.length > slots_per_page && !slots_locked;
       },
       canPrevSlots(page) {
         return page > 0;
@@ -244,11 +279,11 @@
       canNextSlots(page, slots) {
         return this.slots ? (page + 1) * this.slots_per_page < this.slots.length : false;
       },
-      canNextWeek(slots, currentWeek) {
-        return true;
+      canNextWeek(days, days_locked) {
+        return !days_locked && !days.done;
       },
-      canPrevWeek(slots, currentWeek) {
-        return true;
+      canPrevWeek(days, days_locked) {
+        return !days_locked && days.page > 0;
       },
       dayClass(item) {
         return item.active ? 'on' : 'off';
@@ -263,14 +298,12 @@
       },
       previousWeek() {
         this.fire('week-change', {
-          direction: 'previous',
-          week: this.currentWeek
+          direction: 'previous'
         })
       },
       nextWeek() {
         this.fire('week-change', {
-          direction: 'next',
-          week: this.currentWeek
+          direction: 'next'
         })
       },
       previousSlots() {
@@ -291,6 +324,7 @@
       },
       lock(items) {
         if (!items) this.set('days_locked', true);
+
         this.set('slots_locked', true);
       },
       unlock(items) {
