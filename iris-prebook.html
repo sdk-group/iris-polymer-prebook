@@ -28,14 +28,16 @@
         font-weight: 800;
       }
       
-      .day-picker .blank {
-        margin: 0 0.29em;
+      .day-picker .blank,
+      .day-picker .day-placeholder,
+      .day-picker paper-button {
+        margin: 0 5px;
       }
       
       .day-picker paper-button,
       .day-picker .day-placeholder,
       .day-picker .blank {
-        width: calc(100% * (1/7));
+        width: calc(100% * (1/7) - 10px);
         display: inline-block;
         text-align: center;
       }
@@ -211,7 +213,12 @@
         let day_of_month = first.format('D');
         let day_of_week = first.format('d');
 
-        let empty = _.map(_.range(1, parseInt(day_of_week, 10)), day => ({
+        // let empty =
+
+        let pre_count = (day_of_week - (day_of_month - 1) % 7);
+        pre_count = pre_count > 0 ? pre_count : pre_count + 7;
+
+        let empty = _.map(_.range(1, parseInt(pre_count, 10)), day => ({
           "is_available": false,
           "day_of_month": false
         }));
