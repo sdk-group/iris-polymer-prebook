@@ -28,8 +28,13 @@
         font-weight: 800;
       }
       
+      .day-picker .blank {
+        margin: 0 0.29em;
+      }
+      
       .day-picker paper-button,
-      .day-picker .day-placeholder {
+      .day-picker .day-placeholder,
+      .day-picker .blank {
         width: calc(100% * (1/7));
         display: inline-block;
         text-align: center;
@@ -63,8 +68,7 @@
       }
       
       paper-button.selected {
-        border: 4px solid var(--mydoc-beige-800);
-        @apply(--shadow-elevation-3dp);
+        box-shadow: 0px 0px 0px 4px var(--mydoc-beige-800) inset;
       }
       
       #chunks paper-button {
@@ -127,9 +131,14 @@
           <div class="week">
 
             <template is="dom-repeat" items="[[week]]">
-              <paper-button disabled$="[[!item.is_available ]]" class$="{{selectedDay(selected.day,item)}}" on-click="selectDay" raised noink>
-                <div class="date">[[item.day_of_month]]</div>
-              </paper-button>
+              <template is="dom-if" if="[[item.day_of_month]]">
+                <paper-button disabled$="[[!item.is_available ]]" class$="{{selectedDay(selected.day,item)}}" on-click="selectDay" raised noink>
+                  <div class="date">[[item.day_of_month]]</div>
+                </paper-button>
+              </template>
+              <template is="dom-if" if="[[!item.day_of_month]]">
+                <div class="blank"></div>
+              </template>
             </template>
 
           </div>
@@ -149,7 +158,7 @@
           </paper-button>
         </template>
       </div>
-      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[!scrollableSlots(slots,slots_per_page,slots_locked)]]" disabled$="[[!canNextSlots(page,slots)]]" raised></paper-icon-button>
+      <paper-icon-button icon="chevron-right" id="next-slots" on-click="nextSlots" hidden$="[[!scrollableSlots(slots,slots_per_page,slots_locked)]]" disabled$="[[!canNextSlots(page,slots,slots_per_page)]]" raised></paper-icon-button>
     </div>
 
   </template>
@@ -193,16 +202,27 @@
         let timezone = this.$.timezone.get('name');
 
         let first = moment(days[0].date).tz(timezone);
+        console.log(days[0].date, moment(days[0].date).tz(timezone));
+
         this.set('month', {
           label: first.format('MMMM')
         });
 
         let day_of_month = first.format('D');
+        let day_of_week = first.format('d');
+
+        let empty = _.map(_.range(1, parseInt(day_of_week, 10)), day => ({
+          "is_available": false,
+          "day_of_month": false
+        }));
 
         let result = _.map(_.range(1, parseInt(day_of_month, 10)), day => ({
           "is_available": false,
           "day_of_month": day
         }));
+
+        result = _.concat(empty, result);
+
         let first_available = false;
         result = _.reduce(days, (proc, day, index) => {
           let current = moment(day.date).tz(timezone);
@@ -259,7 +279,7 @@
         this.set('selected.slot', item);
       },
       selectedDay(day, item) {
-        return day.date == item.date ? 'selected' : '';
+        return day.date && day.date == item.date ? 'selected' : '';
       },
       selectedSlot(slot, item) {
         return slot == item ? 'selected' : '';
@@ -277,8 +297,8 @@
       canPrevSlots(page) {
         return page > 0;
       },
-      canNextSlots(page, slots) {
-        return this.slots ? (page + 1) * this.slots_per_page < this.slots.length : false;
+      canNextSlots(page, slots, slots_per_page) {
+        return this.slots ? (page + 1) * slots_per_page < this.slots.length : false;
       },
       canNextWeek(days, days_locked) {
         return !days_locked && !days.done;
