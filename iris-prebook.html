@@ -7,33 +7,33 @@
       :host {
         @apply(--layout-vertical);
       }
-      
+
       .picker {
         @apply(--layout-horizontal);
         @apply(--layout-center);
         @apply(--layout-justified);
       }
-      
+
       .day-picker {
         min-height: 430px;
       }
-      
+
       .day-picker h2 {
         text-align: center;
         margin-top: 0;
       }
-      
+
       .day-picker .day-placeholder {
         font-size: 20px;
         font-weight: 800;
       }
-      
+
       .day-picker .blank,
       .day-picker .day-placeholder,
       .day-picker paper-button {
         margin: 0 5px;
       }
-      
+
       .day-picker paper-button,
       .day-picker .day-placeholder,
       .day-picker .blank {
@@ -41,38 +41,38 @@
         display: inline-block;
         text-align: center;
       }
-      
+
       .day-picker paper-button {
         transition: 0.2s ease-out;
       }
-      
+
       .day-picker paper-button.selected {
         font-weight: 800;
         transform: scale(1.3);
         background: white;
         z-index: 1;
       }
-      
+
       .days {
         @apply(--layout-flex-auto);
         margin: 0 35px;
       }
-      
+
       .week {
         height: 60px;
       }
-      
+
       .week,
       .month-splitter {
         @apply(--layout-horizontal);
         @apply(--layout-center);
         @apply(--layout-start-justified);
       }
-      
+
       paper-button.selected {
         box-shadow: 0px 0px 0px 4px var(--mydoc-beige-800) inset;
       }
-      
+
       #chunks paper-button {
         width: 140px;
         margin: 10px;
@@ -80,7 +80,7 @@
         @apply(--layout-center);
         @apply(--layout-center-justified);
       }
-      
+
       .picker paper-icon-button {
         color: var(--mydoc-brown-800);
         border: 2px solid;
@@ -89,17 +89,17 @@
         height: 60px;
         padding: 0 10px;
       }
-      
+
       .picker paper-icon-button[disabled] {
         @apply(--pagination-icon-buttons-disabled);
       }
-      
+
       .slot-picker {
         width: 100%;
         height: 200px;
         display: flex;
       }
-      
+
       #chunks {
         width: calc(100% - 140px);
         @apply(--layout-horizontal);
@@ -108,7 +108,7 @@
         @apply(--layout-center);
         @apply(--layout-center-justified);
       }
-      
+
       paper-spinner {
         width: 56px;
         height: 56px;
@@ -351,13 +351,12 @@
         return hours + ':' + mins;
       },
       lock(items) {
-        if (!items) this.set('days_locked', true);
-
-        this.set('slots_locked', true);
+        if (!items || items == 'days') this.set('days_locked', true);
+        if (!items || items == 'slots') this.set('slots_locked', true);
       },
       unlock(items) {
-        if (!items) this.set('days_locked', false);
-        this.set('slots_locked', false);
+        if (!items || items == 'days') this.set('days_locked', false);
+        if (!items || items == 'slots') this.set('slots_locked', false);
       }
     });
   </script>
