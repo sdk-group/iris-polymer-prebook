@@ -34,9 +34,9 @@
         margin: 0 5px;
       }
 
-      .day-picker paper-button,
+      .day-picker .blank,
       .day-picker .day-placeholder,
-      .day-picker .blank {
+      .day-picker paper-button {
         width: calc(100% * (1/7) - 10px);
         display: inline-block;
         text-align: center;
@@ -62,15 +62,15 @@
         height: 60px;
       }
 
-      .week,
-      .month-splitter {
+      .month-splitter,
+      .week {
         @apply(--layout-horizontal);
         @apply(--layout-center);
         @apply(--layout-start-justified);
       }
 
       paper-button.selected {
-        box-shadow: 0px 0px 0px 4px var(--terminal-button-border-color, --mydoc-beige-800) inset;
+        box-shadow: 0 0 0 4px var(--terminal-button-border-color, --mydoc-beige-800) inset;
       }
 
       #chunks paper-button {
@@ -113,6 +113,7 @@
         width: 56px;
         height: 56px;
       }
+
     </style>
     <iris-shared-entities id="timezone" namespace="timezone"></iris-shared-entities>
     <div class="day-picker picker">
@@ -169,9 +170,7 @@
 
     Polymer({
       is: 'iris-prebook',
-      behaviors: [
-        Polymer.IronResizableBehavior
-      ],
+      behaviors: [Polymer.IronResizableBehavior],
       properties: {
         days: {
           type: Array,
@@ -199,16 +198,15 @@
         this.set('page', 0);
       },
       process(days) {
-        if (!days || days.length === 0) return [];
+        if (!days || days.length === 0)
+          return [];
 
         let timezone = this.$.timezone.get('name');
 
         let first = moment(days[0].date).tz(timezone);
         console.log(days[0].date, moment(days[0].date).tz(timezone));
 
-        this.set('month', {
-          label: first.format('MMMM')
-        });
+        this.set('month', {label: first.format('MMMM')});
 
         let day_of_month = first.format('D');
         let day_of_week = first.format('d');
@@ -216,41 +214,31 @@
         // let empty =
 
         let pre_count = (day_of_week - (day_of_month - 1) % 7);
-        pre_count = pre_count > 0 ? pre_count : pre_count + 7;
+        pre_count = pre_count > 0
+          ? pre_count
+          : pre_count + 7;
 
-        let empty = _.map(_.range(1, parseInt(pre_count, 10)), day => ({
-          "is_available": false,
-          "day_of_month": false
-        }));
+        let empty = _.map(_.range(1, parseInt(pre_count, 10)), day => ({"is_available": false, "day_of_month": false}));
 
-        let result = _.map(_.range(1, parseInt(day_of_month, 10)), day => ({
-          "is_available": false,
-          "day_of_month": day
-        }));
+        let result = _.map(_.range(1, parseInt(day_of_month, 10)), day => ({"is_available": false, "day_of_month": day}));
 
         result = _.concat(empty, result);
 
         let first_available = false;
         result = _.reduce(days, (proc, day, index) => {
           let current = moment(day.date).tz(timezone);
-          first_available = first_available === false && day.is_available ? day : first_available;
+          first_available = first_available === false && day.is_available
+            ? day
+            : first_available;
 
-          proc.push({
-            is_available: day.is_available,
-            date: day.date,
-            day_of_month: current.format('D')
-          });
+          proc.push({is_available: day.is_available, date: day.date, day_of_month: current.format('D')});
 
           return proc;
         }, result);
 
-
         let additional = _.range(parseInt(result[result.length - 1].day_of_month, 10) + 1, parseInt(this.days.total, 10) + 1);
 
-        _.forEach(additional, day => result.push({
-          "is_available": false,
-          "day_of_month": day
-        }));
+        _.forEach(additional, day => result.push({"is_available": false, "day_of_month": day}));
 
         this.set('selected.day', first_available);
         this.fire('select-day', first_available);
@@ -286,10 +274,14 @@
         this.set('selected.slot', item);
       },
       selectedDay(day, item) {
-        return day.date && day.date == item.date ? 'selected' : '';
+        return day.date && day.date == item.date
+          ? 'selected'
+          : '';
       },
       selectedSlot(slot, item) {
-        return slot == item ? 'selected' : '';
+        return slot == item
+          ? 'selected'
+          : '';
       },
       selectDay(e) {
         let item = e.model.item;
@@ -298,6 +290,7 @@
 
         this.fire('select-day', item);
       },
+
       scrollableSlots(slots, slots_per_page, slots_locked) {
         return slots.length > slots_per_page && !slots_locked;
       },
@@ -305,7 +298,9 @@
         return page > 0;
       },
       canNextSlots(page, slots, slots_per_page) {
-        return this.slots ? (page + 1) * slots_per_page < this.slots.length : false;
+        return this.slots
+          ? (page + 1) * slots_per_page < this.slots.length
+          : false;
       },
       canNextWeek(days, days_locked) {
         return !days_locked && !days.done;
@@ -314,7 +309,9 @@
         return !days_locked && days.page > 0;
       },
       dayClass(item) {
-        return item.active ? 'on' : 'off';
+        return item.active
+          ? 'on'
+          : 'off';
       },
       getDay(item) {
         let timezone = this.$.timezone.get('name');
@@ -325,14 +322,10 @@
         return moment(item.date).tz(timezone).format('D MMM');
       },
       previousWeek() {
-        this.fire('week-change', {
-          direction: 'previous'
-        })
+        this.fire('week-change', {direction: 'previous'})
       },
       nextWeek() {
-        this.fire('week-change', {
-          direction: 'next'
-        })
+        this.fire('week-change', {direction: 'next'})
       },
       previousSlots() {
         this.page--;
@@ -346,18 +339,25 @@
       timeFormat(time) {
         let hours = _.floor(time / (60 * 60));
         let mins = _.floor((time % 3600) / 60);
-        mins = mins.toString().length == 1 ? '0' + mins : mins;
+        mins = mins.toString().length == 1
+          ? '0' + mins
+          : mins;
 
         return hours + ':' + mins;
       },
       lock(items) {
-        if (!items || items == 'days') this.set('days_locked', true);
-        if (!items || items == 'slots') this.set('slots_locked', true);
-      },
+        if (!items || items == 'days')
+          this.set('days_locked', true);
+        if (!items || items == 'slots')
+          this.set('slots_locked', true);
+        }
+      ,
       unlock(items) {
-        if (!items || items == 'days') this.set('days_locked', false);
-        if (!items || items == 'slots') this.set('slots_locked', false);
-      }
-    });
+        if (!items || items == 'days')
+          this.set('days_locked', false);
+        if (!items || items == 'slots')
+          this.set('slots_locked', false);
+        }
+      });
   </script>
 </dom-module>
